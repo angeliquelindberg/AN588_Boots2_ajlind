@@ -1,0 +1,99 @@
+---
+title: "ajlind_OriginalHomeworkCode_05"
+author: "Angelique J. Lindberg"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_float: true  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages needed, include=FALSE}
+library(curl) #load or download these packages
+library(boot) 
+```
+
+
+# Homework 5: Bootstrapping Standard Errors and CIs for Linear Models 
+
+**Hi Angelique! Well done on this assignment and good use of the textbook as a resource! My peer commentary will be in bold throughout the markdown. The commentary refers to the chunk above each comment. -Brooke**
+
+## Part 1
+[1] Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β
+ coeffiecients (slope and intercept).
+ Loading in Data:
+```{r}
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN588_Fall23/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors =)
+```
+
+Running linear regression:
+```{r}
+m<-lm(data=d, log(d$HomeRange_km2)~log(d$Body_mass_female_mean))
+summary(m)
+```
+ The intercept is seen at (intercept) row: -9.44. This means that the predicted value of the log of the home range is -9.44 when log of female mean body mass is 0. The slope is seen where the y variable is (the function goes y~x), so 1.04. This means that the log of the home range is predicted to change by about 1.04 per unit of change in the log of body mass female mean.
+
+**This all looks good! Well done interpreting the numbers. I should do that in my homework as well.**
+
+## Part 2
+Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+Going to use bootstrapping method from R in Action p6. 306
+```{r}
+bs<-function(formula, data, indices){ #specifying which statistics to bootstrap
+  d2<-data[indices,]
+  fit<-lm(formula, data=d2)
+  return(coef(fit))
+}
+set.seed(923)
+bootdist<-boot(data=d, statistic=bs, R=1000, formula=log(HomeRange_km2)~log(Body_mass_female_mean))#1000 repetitions 
+print(bootdist)
+```
+Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.
+
+**This method looks great and you get a nicely printed summary. I tried to use a method similar to the module, and it definitely took more steps.**
+
+**This chunk could benefit from more annotation, though.**
+
+**Using this method, is there a way to see the 1000 sampled statistics if you wanted to? That is necessary for this assignment, but I am wondering if that is possible for this quick method where the behind the scenes work is all in the boot() function.**
+
+
+
+To do confidence intervals, need to use different code:
+```{r}
+boot.ci(bootdist, type="bca", index=1) #telling it to give me confidence interval of first index (intercept)
+```
+
+```{r}
+boot.ci(bootdist, type="bca", index=2) #telling it to give me confidence interval of second index (slope)
+```
+**Great! The annotations here are good, too.**
+
+How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+The standard error of the intercept earlier was 0.67, so that's close-ish to 0.57 (t1* line). The standard error of the slop earlier was 0.08 so that's close to 0.07.
+
+**It is interesting that the intercept and the slope differed by about the same amount (85%-88%) between the two methods.**
+
+How does the latter compare to the 95% CI estimated from your entire dataset?
+```{r}
+confint(m, level=0.95)
+```
+
+The 95% confidence interval  for the intercept from the bootstrap was (-10.56, -8.28) which is very close to the (-10.77, -8.11) interval from the entire data. The slope CI from bootstrap was (0.89, 1.19) which very close to the (0.87, 1.2) CI for the entire data.
+
+**These all look good! Notably, the confidence intervals from the bootstrap look slightly narrower than the confidence intervals from the entire dataset.**
+
+## Challenges
+1. I was so confused on due dates for this assignment since the website was out of date, that was very anxiety-inducing.
+2. Bootstrap method from the module did not work for me at all so I had to use the textbook way, which was pretty simple actually.
+3. The only tricky part of the bootstrap was that I originally specified d$Homerange and d$bodyweight and that won't work, it will just redo the lm from the data and not sample. Took me some trial and error to figure out that and other adapting errors from copying code in textbook.
+
+**Very nice. I don't have more comments because your code seems to really accomplish the task well. The next step for you would be to attempt one of the extra credit challenges if you have the time.**
